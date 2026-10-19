@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A game for 3rd and 4th graders to practice selecting, copying, and pasting text.">
+<title>Copy Cat Quest</title>
+<style>
+:root{color-scheme:light}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@600;800&display=swap">
+<style>
+/* Layout: one chunky "sticker" game card in a single column; the passage is the only place text can be selected, and selection paints in highlighter yellow. */
+:root{
+  --bg:#dcf1f4; --surface:#ffffff; --paper:#f1f9fa; --ink:#14304a; --muted:#4a677d;
+  --edge:#14304a; --line:#b4d6dc; --accent:#e9476b; --cat:#f5a33a; --cat-in:#ffd9a3;
+  --hl:#ffe14d; --hl-ink:#14304a; --good:#17805a; --good-bg:#d9f3e6; --warn:#c21f1f; --warn-bg:#fde4e1;
+  --display:"Baloo 2","Trebuchet MS","Segoe UI",sans-serif;
+  --body:"Atkinson Hyperlegible","Verdana","Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e2030; --surface:#17324a; --paper:#1e3f5a; --ink:#eef7fa; --muted:#a6c0cf;
+    --edge:#8fb4cc; --line:#345873; --accent:#ff7d99; --cat:#f5a33a; --cat-in:#ffd9a3;
+    --hl:#ffd83a; --hl-ink:#14304a; --good:#6fe0ab; --good-bg:#12432f; --warn:#ff9d94; --warn-bg:#4d1b18;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e2030; --surface:#17324a; --paper:#1e3f5a; --ink:#eef7fa; --muted:#a6c0cf;
+  --edge:#8fb4cc; --line:#345873; --accent:#ff7d99; --cat:#f5a33a; --cat-in:#ffd9a3;
+  --hl:#ffd83a; --hl-ink:#14304a; --good:#6fe0ab; --good-bg:#12432f; --warn:#ff9d94; --warn-bg:#4d1b18;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--body); font-size:1.0625rem; line-height:1.5;
+  -webkit-user-select:none; user-select:none; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:46rem; margin:0 auto; padding-inline:16px; padding-block:20px 40px; display:flex; flex-direction:column; gap:18px}
+h1,h2,p,ol{margin:0}
+ol{padding:0; list-style:none}
+
+.top{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.cat{width:84px; height:auto; flex:none}
+.cat .happy{display:none}
+.cat.is-happy .happy{display:inline}
+.cat.is-happy .open{display:none}
+.cat.is-happy{animation:hop .5s ease-out 2}
+@keyframes hop{50%{transform:translateY(-10px) rotate(-4deg)}}
+.titles{flex:1 1 12rem; min-width:0}
+h1{font-family:var(--display); font-weight:800; font-size:clamp(1.9rem,7vw,2.7rem); line-height:1; text-wrap:balance}
+h1 mark{background:var(--hl); color:var(--hl-ink); padding:0 .18em; border-radius:6px}
+.tagline{color:var(--muted); margin-top:4px}
+
+.track{display:flex; flex-wrap:wrap; gap:6px 5px; align-items:center}
+.fish{line-height:0}
+.fish:nth-child(3n){margin-right:10px}
+.fish svg{width:30px; height:19px; fill:var(--line)}
+.fish.now svg{fill:var(--muted)}
+.fish.caught svg{fill:var(--accent)}
+.fish.pop svg{animation:pop .45s ease-out}
+@keyframes pop{40%{transform:scale(1.6) rotate(-12deg)}}
+
+.card{background:var(--surface); border:3px solid var(--edge); border-radius:20px; box-shadow:6px 6px 0 var(--edge); padding:20px; display:flex; flex-direction:column; gap:16px}
+.level{font-family:var(--display); font-weight:600; font-size:.95rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.mission{font-size:1.2rem; font-weight:700; display:flex; flex-wrap:wrap; align-items:baseline; gap:8px}
+.target{background:var(--hl); color:var(--hl-ink); padding:2px 12px; border-radius:10px; font-size:1.3rem; overflow-wrap:anywhere}
+.passage{
+  -webkit-user-select:text; user-select:text; cursor:text;
+  background:var(--paper); border:2px dashed var(--line); border-radius:14px; padding:18px 18px;
+  font-size:clamp(1.35rem,4.6vw,1.8rem); line-height:1.75; overflow-wrap:break-word;
+}
+.passage::selection{background:var(--hl); color:var(--hl-ink)}
+.paste{display:flex; flex-direction:column; gap:6px}
+.paste label{font-weight:700}
+.paste textarea{
+  -webkit-user-select:text; user-select:text; width:100%; resize:none; font:inherit; font-size:1.3rem;
+  color:var(--ink); background:var(--surface); border:3px solid var(--edge); border-radius:14px; padding:12px 14px;
+}
+.status{font-weight:700; padding:10px 14px; border-radius:12px; border:3px solid var(--line); background:var(--paper); color:var(--muted); min-height:2.9em; display:flex; align-items:center; overflow-wrap:anywhere}
+.status[data-state="good"]{background:var(--good-bg); color:var(--good); border-color:var(--good)}
+.status[data-state="warn"]{background:var(--warn-bg); color:var(--warn); border-color:var(--warn)}
+.actions{display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center}
+button{font-family:var(--display); font-weight:600; font-size:1.1rem; cursor:pointer; border-radius:14px; padding:8px 18px; border:3px solid var(--edge); background:var(--surface); color:var(--ink)}
+button.big{background:var(--accent); color:var(--surface); box-shadow:4px 4px 0 var(--edge); font-weight:800; font-size:1.3rem; padding:8px 26px}
+#next{background:var(--good)}
+button.big:active{transform:translate(2px,2px); box-shadow:2px 2px 0 var(--edge)}
+button.quiet{border-color:var(--line); color:var(--muted); font-size:1rem}
+:focus-visible{outline:4px solid var(--good); outline-offset:3px}
+
+.tip{display:flex; flex-direction:column; gap:12px; padding-inline:4px}
+.tip-head{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
+h2{font-family:var(--display); font-weight:800; font-size:1.35rem}
+.seg{display:flex; flex-wrap:wrap; gap:6px}
+.seg button{font-size:.95rem; padding:4px 12px; border-width:2px}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.steps{counter-reset:s; display:flex; flex-direction:column; gap:8px; max-width:38rem}
+.steps li{counter-increment:s; display:flex; gap:10px; align-items:baseline}
+.steps li::before{content:counter(s); flex:none; width:1.7em; height:1.7em; border-radius:50%; background:var(--ink); color:var(--bg); font-family:var(--display); font-weight:800; display:inline-flex; align-items:center; justify-content:center; font-size:.95rem}
+kbd{font-family:var(--body); font-weight:700; font-size:.95em; border:2px solid var(--edge); border-bottom-width:4px; border-radius:7px; padding:0 7px; background:var(--surface); color:var(--ink)}
+
+.finish{text-align:center; align-items:center}
+.finish .score{font-family:var(--display); font-weight:800; font-size:clamp(2.2rem,9vw,3.4rem); line-height:1.05}
+.finish .score span{background:var(--hl); color:var(--hl-ink); padding:0 .2em; border-radius:10px}
+.sprite{position:absolute; width:0; height:0; overflow:hidden}
+@media (prefers-reduced-motion: reduce){ .cat.is-happy,.fish.pop svg{animation:none} }
+</style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true"><symbol id="fish" viewBox="0 0 32 20"><ellipse cx="13" cy="10" rx="12" ry="7.5"/><polygon points="22,10 31,2 31,18"/></symbol></svg>
+
+<div class="wrap">
+  <header class="top">
+    <svg class="cat" id="cat" viewBox="0 0 120 106" aria-hidden="true">
+      <polygon points="20,50 26,6 58,30" fill="var(--cat)" stroke="var(--edge)" stroke-width="4" stroke-linejoin="round"/>
+      <polygon points="100,50 94,6 62,30" fill="var(--cat)" stroke="var(--edge)" stroke-width="4" stroke-linejoin="round"/>
+      <ellipse cx="60" cy="62" rx="46" ry="39" fill="var(--cat)" stroke="var(--edge)" stroke-width="4"/>
+      <ellipse cx="60" cy="76" rx="20" ry="14" fill="var(--cat-in)"/>
+      <g class="open"><circle cx="42" cy="56" r="6.5" fill="var(--hl-ink)"/><circle cx="78" cy="56" r="6.5" fill="var(--hl-ink)"/></g>
+      <g class="happy" fill="none" stroke="var(--hl-ink)" stroke-width="4.5" stroke-linecap="round"><path d="M34 59q8-11 16 0"/><path d="M70 59q8-11 16 0"/></g>
+      <polygon points="55,68 65,68 60,74" fill="var(--accent)"/>
+      <path d="M60 74q-6 8-13 3M60 74q6 8 13 3" fill="none" stroke="var(--hl-ink)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M30 70H8M31 77l-21 6M90 70h22M89 77l21 6" fill="none" stroke="var(--edge)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <div class="titles">
+      <h1>Copy Cat <mark>Quest</mark></h1>
+      <p class="tagline">Pixel the cat is hungry. Catch the right words to win a fish.</p>
+    </div>
+    <button class="quiet" id="sound" type="button" aria-pressed="true">Sound: on</button>
+  </header>
+
+  <ol class="track" id="track" aria-label="Fish caught so far"></ol>
+
+  <main class="card" id="game">
+    <p class="level" id="levelLabel"></p>
+    <p class="mission"><span id="verb"></span> <span class="target" id="target"></span></p>
+    <p class="passage" id="passage"></p>
+    <div class="paste" id="pasteRow" hidden>
+      <label for="pasteBox">Paste it in this box:</label>
+      <textarea id="pasteBox" rows="2" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="actions">
+      <button class="quiet" id="skip" type="button">Skip this one</button>
+      <button class="big" id="next" type="button" hidden>Next</button>
+    </div>
+  </main>
+
+  <section class="tip" id="tip" aria-labelledby="tipTitle">
+    <div class="tip-head">
+      <h2 id="tipTitle">How to do it</h2>
+      <div class="seg" role="group" aria-label="What are you using?">
+        <button type="button" id="devMouse" aria-pressed="false">Mouse and keyboard</button>
+        <button type="button" id="devTouch" aria-pressed="false">Touchscreen</button>
+      </div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+  </section>
+
+  <section class="card finish" id="finish" hidden>
+    <p class="level">Quest complete</p>
+    <p class="score" id="score"></p>
+    <p id="finishMsg"></p>
+    <button class="big" id="again" type="button">Play again</button>
+  </section>
+</div>
+
+<script>
+(function(){
+  var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+  var K = '<kbd>' + (mac ? '⌘ Command' : 'Ctrl') + '</kbd>';
+
+  var LEVELS = [
+    { name:'Catch a word', verb:'Select this word:', kind:'select',
+      mouse:['Point at the word.','Double-click it. Click, click, fast!','The word lights up yellow. That means it is selected.'],
+      touch:['Press your finger on the word and hold it there.','Lift your finger when the word lights up.'],
+      pool:[
+        {t:'A cat can sleep for sixteen hours a day. That is a lot of naps!', a:'sixteen'},
+        {t:'An octopus has three hearts and blue blood. It also has eight arms.', a:'octopus'},
+        {t:'A baby kangaroo is called a joey. It rides in a pouch.', a:'joey'},
+        {t:'Hummingbirds can fly backward. Most birds cannot do that.', a:'backward'}
+      ]},
+    { name:'Catch a few words', verb:'Select these words:', kind:'select',
+      mouse:['Click just before the first word.','Hold the button down and drag to the end of the last word.','Let go.'],
+      touch:['Press and hold the first word until it lights up.','Drag the little handle to the end of the last word.'],
+      pool:[
+        {t:'Polar bears have black skin under their white fur. The dark skin helps them stay warm.', a:'black skin'},
+        {t:'Butterflies taste with their feet. They land on a leaf to find out if it is yummy.', a:'with their feet'},
+        {t:'Honeybees do a special dance to show other bees where the flowers are.', a:'a special dance'},
+        {t:'Sea otters hold hands while they sleep. That way they do not float apart.', a:'hold hands'}
+      ]},
+    { name:'Catch a whole sentence', verb:'Select this sentence:', kind:'select',
+      mouse:['Click just before the first letter of the sentence.','Hold down <kbd>Shift</kbd>.','Click right after the period at the end.'],
+      touch:['Press and hold the first word of the sentence.','Drag the little handle to the period at the end.'],
+      pool:[
+        {t:'Frogs do not drink with their mouths. They soak up water through their skin. Pretty neat!', a:'They soak up water through their skin.'},
+        {t:'Penguins are birds. They cannot fly. They are super swimmers instead.', a:'They cannot fly.'},
+        {t:'Owls fly at night. Their soft feathers help them fly quietly. You would not hear one go by.', a:'Their soft feathers help them fly quietly.'},
+        {t:'Elephants are the largest land animals. They use their trunks to drink and to smell. A trunk can even pick up a peanut.', a:'Elephants are the largest land animals.'}
+      ]},
+    { name:'Copy it', verb:'Select and copy:', kind:'copy',
+      mouse:['Select the words.','Press ' + K + ' + <kbd>C</kbd> to copy.','You can also right-click the yellow words and choose Copy.'],
+      touch:['Select the words.','A little menu pops up. Tap <b>Copy</b>.'],
+      pool:[
+        {t:'Cats use their whiskers to feel how wide a space is. Whiskers are like tiny rulers.', a:'tiny rulers'},
+        {t:'A cheetah is the fastest land animal. It can zoom past a car on a city street.', a:'fastest land animal'},
+        {t:'Giraffes have long purple tongues. They use them to grab leaves from tall trees.', a:'long purple tongues'},
+        {t:'A group of kittens is called a litter. A group of grown cats is called a clowder.', a:'clowder'}
+      ]},
+    { name:'Copy and paste', verb:'Copy, then paste:', kind:'paste',
+      mouse:['Select the words and press ' + K + ' + <kbd>C</kbd> to copy.','Click inside the box.','Press ' + K + ' + <kbd>V</kbd> to paste.'],
+      touch:['Select the words and tap <b>Copy</b>.','Press and hold inside the box.','Tap <b>Paste</b>.'],
+      pool:[
+        {t:'The secret password is fuzzy pancakes. Do not tell the dog.', a:'fuzzy pancakes'},
+        {t:'Pixel left a note on the fridge. It says please feed me at seven. She means it.', a:'please feed me at seven'},
+        {t:'The treasure is hidden under the blue couch. Only cats know this.', a:'under the blue couch'},
+        {t:'Pixel loves crunchy tuna toast. She eats it every Saturday.', a:'crunchy tuna toast'}
+      ]}
+  ];
+  var PER_LEVEL = 3;
+  var PRAISE = ['Purr-fect!','You caught it!','Nice catch!','Paws-itively right!','Meow-velous!'];
+
+  var $ = function(id){ return document.getElementById(id); };
+  var el = { cat:$('cat'), track:$('track'), game:$('game'), level:$('levelLabel'), verb:$('verb'), target:$('target'),
+    passage:$('passage'), pasteRow:$('pasteRow'), box:$('pasteBox'), status:$('status'), skip:$('skip'), next:$('next'),
+    tip:$('tip'), steps:$('steps'), finish:$('finish'), score:$('score'), finishMsg:$('finishMsg'), again:$('again'),
+    sound:$('sound'), devMouse:$('devMouse'), devTouch:$('devTouch') };
+
+  var state = { rounds:[], i:0, results:[] };
+  var done = false, copied = false, timer = null, soundOn = true, audio = null;
+  var device = 'mouse';
+  try { device = localStorage.getItem('ccq-device') || ''; } catch(e){ device = ''; }
+  if (device !== 'mouse' && device !== 'touch') device = (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 'touch' : 'mouse';
+
+  function shuffle(a){ for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function newGame(){
+    var rounds = [];
+    LEVELS.forEach(function(L, l){
+      shuffle(L.pool.map(function(_, p){ return p; })).slice(0, PER_LEVEL).forEach(function(p){ rounds.push({l:l, p:p}); });
+    });
+    state = { rounds:rounds, i:0, results:[] };
+  }
+  function cur(){ var r = state.rounds[state.i]; return { L:LEVELS[r.l], item:LEVELS[r.l].pool[r.p], l:r.l }; }
+
+  function norm(s){
+    return String(s).replace(/[\r\n]+$/,'');
+  }
+  function picked(){
+    var s = document.getSelection();
+    if (!s || s.isCollapsed) return '';
+    if (!(el.passage.contains(s.anchorNode) || el.passage.contains(s.focusNode))) return '';
+    return s.toString();
+  }
+  function judge(text){
+    var a = norm(text), b = norm(cur().item.a);
+    if (!a) return 'none';
+    if (a === b) return 'match';
+    if (a.indexOf(b) >= 0) return 'big';
+    if (b.indexOf(a) >= 0) return 'small';
+    return 'off';
+  }
+  function say(stateName, msg){ el.status.dataset.state = stateName; el.status.textContent = msg; }
+
+  function drawTrack(pop){
+    el.track.innerHTML = '';
+    state.rounds.forEach(function(_, n){
+      var li = document.createElement('li');
+      li.className = 'fish' + (state.results[n] === 'caught' ? ' caught' : '') + (n === state.i && !done ? ' now' : '') + (pop === n ? ' pop' : '');
+      li.innerHTML = '<svg viewBox="0 0 32 20" aria-hidden="true"><use href="#fish"/></svg>';
+      el.track.appendChild(li);
+    });
+    var c = state.results.filter(function(r){ return r === 'caught'; }).length;
+    el.track.setAttribute('aria-label', c + ' of ' + state.rounds.length + ' fish caught');
+  }
+  function drawTips(){
+    var L = cur().L;
+    el.steps.innerHTML = L[device].map(function(s){ return '<li><span>' + s + '</span></li>'; }).join('');
+    el.devMouse.setAttribute('aria-pressed', String(device === 'mouse'));
+    el.devTouch.setAttribute('aria-pressed', String(device === 'touch'));
+  }
+  function render(){
+    if (state.i >= state.rounds.length) return finish();
+    var c = cur();
+    done = false; copied = false; clearTimeout(timer);
+    el.finish.hidden = true; el.game.hidden = false; el.tip.hidden = false;
+    el.level.textContent = 'Level ' + (c.l + 1) + ' of ' + LEVELS.length + ' · ' + c.L.name;
+    el.verb.textContent = c.L.verb;
+    el.target.textContent = c.item.a;
+    el.passage.textContent = c.item.t;
+    el.pasteRow.hidden = c.L.kind !== 'paste';
+    el.box.value = '';
+    el.next.hidden = true; el.skip.hidden = false;
+    el.next.textContent = state.i === state.rounds.length - 1 ? 'See my score' : 'Next';
+    el.cat.classList.remove('is-happy');
+    say('idle', 'Nothing picked yet. Find the yellow words in the story below them.');
+    drawTrack(); drawTips();
+  }
+  function win(){
+    if (done) return;
+    done = true; clearTimeout(timer);
+    state.results[state.i] = 'caught';
+    say('good', PRAISE[Math.floor(Math.random()*PRAISE.length)] + ' Pixel gets a fish.');
+    el.cat.classList.remove('is-happy'); void el.cat.getBoundingClientRect(); el.cat.classList.add('is-happy');
+    el.next.hidden = false; el.skip.hidden = true;
+    drawTrack(state.i); chime();
+  }
+  function advance(){
+    state.i++;
+    try { document.getSelection().removeAllRanges(); } catch(e){}
+    render();
+  }
+  function finish(){
+    done = true;
+    var total = state.rounds.length;
+    var c = state.results.filter(function(r){ return r === 'caught'; }).length;
+    el.game.hidden = true; el.tip.hidden = true; el.finish.hidden = false;
+    el.score.innerHTML = '<span>' + c + ' of ' + total + '</span> fish';
+    el.finishMsg.textContent = c === total ? 'A perfect catch! Pixel is one full, happy cat.'
+      : c >= total * 2 / 3 ? 'Great catching! Pixel is purring.'
+      : 'Good practice! Play again to catch even more.';
+    el.cat.classList.add('is-happy');
+    drawTrack();
+  }
+  function chime(){
+    if (!soundOn) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      [660, 880, 1320].forEach(function(f, n){
+        var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + n * 0.09;
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.15, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+        o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.3);
+      });
+    } catch(e){}
+  }
+
+  document.addEventListener('selectionchange', function(){
+    if (done || state.i >= state.rounds.length) return;
+    clearTimeout(timer);
+    var kind = cur().L.kind, j = judge(picked());
+    if (j === 'none') {
+      if (kind === 'paste' && copied) return;
+      say('idle', 'Nothing picked yet. Find the yellow words in the story below them.');
+    } else if (j === 'big') {
+      var extra = norm(picked()).replace(norm(cur().item.a), '');
+      say('warn', /^\s+$/.test(extra) ? 'Too much! Leave out the empty space.' : /^[\s.,!?]+$/.test(extra) ? 'Too much! Leave out the period or other mark.' : 'Too much! Make your yellow part smaller.');
+    }
+    else if (j === 'small') say('warn', /^[.!?]$/.test(norm(cur().item.a).replace(norm(picked()), '')) ? 'Almost! Grab the mark at the end of the sentence too.' : 'Almost! Grab a little more.');
+    else if (j === 'off') say('warn', 'Not those words. Look for the ones in the yellow tag.');
+    else if (kind === 'select') {
+      say('idle', 'That looks right...');
+      timer = setTimeout(function(){ if (!done && judge(picked()) === 'match') win(); }, 500);
+    } else say('good', 'Just right! Now copy it.');
+  });
+
+  // Some computers grab the space after a word on double-click. Trim it so only the word is highlighted.
+  el.passage.addEventListener('dblclick', function(){
+    try {
+      var s = document.getSelection();
+      if (!s || !s.rangeCount) return;
+      var r = s.getRangeAt(0), n = r.endContainer, o = r.endOffset;
+      if (n.nodeType !== 3) return;
+      while (o > 0 && /\s/.test(n.data.charAt(o - 1))) o--;
+      if (o === r.endOffset) return;
+      r.setEnd(n, o);
+      s.removeAllRanges(); s.addRange(r);
+    } catch(e){}
+  });
+
+  document.addEventListener('copy', function(){
+    if (done || state.i >= state.rounds.length) return;
+    var kind = cur().L.kind, j = judge(picked());
+    if (kind === 'select' || j === 'none') return;
+    if (j !== 'match') return say('warn', 'You copied, but not the right words. Fix your yellow part and copy again.');
+    if (kind === 'copy') return win();
+    copied = true;
+    say('good', device === 'touch' ? 'Copied! Now press and hold in the box, then tap Paste.' : 'Copied! Now click in the box and paste.');
+  });
+
+  el.box.addEventListener('input', function(e){
+    if (done) return;
+    var t = e.inputType || '';
+    if (t && t !== 'insertFromPaste' && t !== 'insertFromDrop' && t.indexOf('delete') !== 0 && t.indexOf('history') !== 0) {
+      el.box.value = '';
+      return say('warn', 'No typing! Copy the words, then paste them in.');
+    }
+    if (!el.box.value.trim()) return;
+    if (judge(el.box.value) === 'match') return win();
+    say('warn', 'Those are not the right words. Copy again, then paste.');
+    setTimeout(function(){ if (!done) el.box.value = ''; }, 1000);
+  });
+
+  el.skip.addEventListener('click', function(){ state.results[state.i] = 'skipped'; advance(); });
+  el.next.addEventListener('click', advance);
+  el.again.addEventListener('click', function(){ newGame(); render(); });
+  el.sound.addEventListener('click', function(){
+    soundOn = !soundOn;
+    el.sound.setAttribute('aria-pressed', String(soundOn));
+    el.sound.textContent = 'Sound: ' + (soundOn ? 'on' : 'off');
+  });
+  function setDevice(d){
+    device = d;
+    try { localStorage.setItem('ccq-device', d); } catch(e){}
+    if (state.i < state.rounds.length) drawTips();
+  }
+  el.devMouse.addEventListener('click', function(){ setDevice('mouse'); });
+  el.devTouch.addEventListener('click', function(){ setDevice('touch'); });
+
+  function start(data){
+    if (data && Array.isArray(data.rounds) && data.rounds.length) state = { rounds:data.rounds, i:data.i || 0, results:data.results || [] };
+    else newGame();
+    render();
+  }
+  var hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(function(){ return state; });
+  if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
